@@ -37,6 +37,9 @@ App Secret không được hardcode trong repo. Khi deploy thật, đặt trong 
 ```text
 LARK_APP_ID=cli_a975bd3a93b99eed
 LARK_APP_SECRET=your_secret_here
+LARK_SOURCE_DATE_FIELD=
 ```
 
 Sau khi đổi env var trên Vercel, redeploy project để function nhận cấu hình mới.
+
+`Ngày công TT` được đếm unique theo `Tên + Ngày`, để một ngày có 2 dòng vào/ra chỉ tính là 1 ngày công. Script sẽ tự dò cột ngày/giờ phổ biến như `Date`, `Time`, `Ngày`, `Thời gian chấm công`. Nếu bảng nguồn dùng tên cột khác, đặt `LARK_SOURCE_DATE_FIELD` bằng đúng tên cột ngày/giờ trong bảng nguồn.
