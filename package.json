@@ -1,0 +1,15 @@
+{
+  "name": "lark-payroll-sync",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Analyze Lark Base attendance records and sync payroll fields.",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "dev": "node payroll_ui_server.js",
+    "start": "node payroll_ui_server.js",
+    "check": "node --check sync_lark_payroll.js && node --check payroll_ui_server.js && node --check public/app.js && node --check api/_shared.js && node --check api/analyze.js && node --check api/sync.js",
+    "self-test": "node sync_lark_payroll.js --self-test"
+  }
+}

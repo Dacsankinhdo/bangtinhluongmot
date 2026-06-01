@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Lark Payroll Sync</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Lark Base</p>
+          <h1>Phân tích chấm công</h1>
+        </div>
+        <div class="destination">
+          <span>Bảng lương đích</span>
+          <strong>tblgL5ME8fR2c8mc</strong>
+        </div>
+      </header>
+
+      <section class="control-band" aria-label="Nguồn dữ liệu">
+        <label for="sourceUrl">URL bảng nguồn</label>
+        <div class="url-row">
+          <input
+            id="sourceUrl"
+            name="sourceUrl"
+            type="url"
+            autocomplete="off"
+            spellcheck="false"
+            placeholder="https://dacsankinhdo.sg.larksuite.com/base/..."
+          />
+          <button id="analyzeButton" type="button">Phân tích</button>
+          <button id="syncButton" type="button" disabled>Cập nhật</button>
+        </div>
+        <p id="statusText" class="status-text" role="status">Sẵn sàng.</p>
+      </section>
+
+      <section class="metrics-grid" aria-label="Tổng quan">
+        <div class="metric">
+          <span>Record nguồn</span>
+          <strong id="sourceRecordCount">0</strong>
+        </div>
+        <div class="metric">
+          <span>Nhân viên</span>
+          <strong id="employeeCount">0</strong>
+        </div>
+        <div class="metric">
+          <span>Sẽ cập nhật</span>
+          <strong id="updateCount">0</strong>
+        </div>
+        <div class="metric">
+          <span>Chưa khớp</span>
+          <strong id="missingCount">0</strong>
+        </div>
+      </section>
+
+      <section class="result-layout">
+        <div class="table-region">
+          <div class="section-heading">
+            <h2>Kết quả phân tích</h2>
+            <span id="parsedSource">Chưa có nguồn</span>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Tên</th>
+                  <th>Ngày công TT</th>
+                  <th>Số lần trễ</th>
+                  <th>Đối chiếu</th>
+                </tr>
+              </thead>
+              <tbody id="summaryBody">
+                <tr>
+                  <td colspan="4" class="empty-state">Dán link bảng nguồn và bấm Phân tích.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <aside class="side-region" aria-label="Cảnh báo">
+          <div class="section-heading">
+            <h2>Chưa khớp tên</h2>
+          </div>
+          <ul id="missingList" class="missing-list">
+            <li>Không có dữ liệu.</li>
+          </ul>
+        </aside>
+      </section>
+    </main>
+
+    <script src="/app.js"></script>
+  </body>
+</html>
