@@ -42,6 +42,8 @@ function publicAnalysis(analysis) {
     updateCount: analysis.updateCount,
     summaries: analysis.summaries,
     missingNames: analysis.missingNames,
+    hr: analysis.hr,
+    createdEmployeeNames: analysis.createdEmployeeNames || [],
   };
 }
 
