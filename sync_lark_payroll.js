@@ -22,9 +22,41 @@ const DESTINATION_TABLE_ID = "tblgL5ME8fR2c8mc";
 
 const SOURCE_NAME_FIELD = "Name";
 const SOURCE_RESULT_FIELD = "Result";
+const SOURCE_DATE_FIELD = process.env.LARK_SOURCE_DATE_FIELD || "";
 const DESTINATION_NAME_FIELD = "Tên NV";
 const DESTINATION_WORK_DAYS_FIELD = "Ngày công TT";
 const DESTINATION_LATE_COUNT_FIELD = "Số lần trễ";
+
+const SOURCE_DATE_FIELD_CANDIDATES = [
+  "Date",
+  "Day",
+  "Time",
+  "Timestamp",
+  "Check Time",
+  "Clock Time",
+  "Attendance Time",
+  "Attendance Date",
+  "Record Time",
+  "Ngày",
+  "Ngày công",
+  "Thời gian",
+  "Thời gian chấm công",
+  "Giờ chấm công",
+];
+
+const SOURCE_DATE_FIELD_KEYWORDS = [
+  "date",
+  "day",
+  "time",
+  "timestamp",
+  "clock",
+  "check",
+  "attendance",
+  "ngày",
+  "thời gian",
+  "giờ",
+  "chấm công",
+];
 
 const SAMPLE_SOURCE_URL =
   "https://dacsankinhdo.sg.larksuite.com/base/" +
@@ -231,6 +263,110 @@ function normalizeName(name) {
   return name.split(/\s+/).filter(Boolean).join(" ").toLocaleLowerCase("vi-VN");
 }
 
+function formatDateKey(date) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Ho_Chi_Minh",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
+}
+
+function parseDateKey(value) {
+  if (value === null || value === undefined || value === "") {
+    return "";
+  }
+
+  if (typeof value === "number") {
+    const timestamp = value > 100000000000 ? value : value * 1000;
+    const date = new Date(timestamp);
+    return Number.isNaN(date.getTime()) ? "" : formatDateKey(date);
+  }
+
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const key = parseDateKey(item);
+      if (key) {
+        return key;
+      }
+    }
+    return "";
+  }
+
+  if (typeof value === "object") {
+    for (const key of ["timestamp", "time", "date", "value", "text"]) {
+      if (Object.prototype.hasOwnProperty.call(value, key)) {
+        const dateKey = parseDateKey(value[key]);
+        if (dateKey) {
+          return dateKey;
+        }
+      }
+    }
+    return "";
+  }
+
+  const text = String(value).trim();
+  const ymd = text.match(/\b(\d{4})[-/](\d{1,2})[-/](\d{1,2})\b/);
+  if (ymd) {
+    return `${ymd[1]}-${ymd[2].padStart(2, "0")}-${ymd[3].padStart(2, "0")}`;
+  }
+
+  const dmy = text.match(/\b(\d{1,2})[-/](\d{1,2})[-/](\d{4})\b/);
+  if (dmy) {
+    return `${dmy[3]}-${dmy[2].padStart(2, "0")}-${dmy[1].padStart(2, "0")}`;
+  }
+
+  const parsed = new Date(text);
+  return Number.isNaN(parsed.getTime()) ? "" : formatDateKey(parsed);
+}
+
+function findFieldValue(fields, fieldName) {
+  if (!fieldName) {
+    return undefined;
+  }
+  if (Object.prototype.hasOwnProperty.call(fields, fieldName)) {
+    return fields[fieldName];
+  }
+
+  const normalized = fieldName.toLocaleLowerCase("vi-VN");
+  const matchedKey = Object.keys(fields).find(
+    (key) => key.toLocaleLowerCase("vi-VN") === normalized
+  );
+  return matchedKey ? fields[matchedKey] : undefined;
+}
+
+function findAttendanceDayKey(fields) {
+  if (SOURCE_DATE_FIELD) {
+    const configuredKey = parseDateKey(findFieldValue(fields, SOURCE_DATE_FIELD));
+    if (configuredKey) {
+      return configuredKey;
+    }
+  }
+
+  for (const fieldName of SOURCE_DATE_FIELD_CANDIDATES) {
+    const candidateKey = parseDateKey(findFieldValue(fields, fieldName));
+    if (candidateKey) {
+      return candidateKey;
+    }
+  }
+
+  const fuzzyEntries = Object.entries(fields).filter(([fieldName]) => {
+    const normalized = fieldName.toLocaleLowerCase("vi-VN");
+    return SOURCE_DATE_FIELD_KEYWORDS.some((keyword) => normalized.includes(keyword));
+  });
+
+  for (const [, value] of fuzzyEntries) {
+    const candidateKey = parseDateKey(value);
+    if (candidateKey) {
+      return candidateKey;
+    }
+  }
+
+  return "";
+}
+
 function isValidAttendanceRecord(name, result) {
   return Boolean(name) && Boolean(result);
 }
@@ -257,17 +393,27 @@ function aggregateAttendance(records) {
         name: displayNameByKey.get(nameKey),
         workDays: 0,
         lateCount: 0,
+        workDayKeys: new Set(),
       });
     }
 
     const summary = summariesByKey.get(nameKey);
-    summary.workDays += 1;
+    const dayKey = findAttendanceDayKey(fields);
+    const workDayKey = dayKey || `record:${record.record_id || summary.workDayKeys.size}`;
+    if (!summary.workDayKeys.has(workDayKey)) {
+      summary.workDayKeys.add(workDayKey);
+      summary.workDays += 1;
+    }
     if (result.toLocaleLowerCase("en-US") === "very late") {
       summary.lateCount += 1;
     }
   }
 
-  return Array.from(summariesByKey.values());
+  return Array.from(summariesByKey.values()).map((summary) => ({
+    name: summary.name,
+    workDays: summary.workDays,
+    lateCount: summary.lateCount,
+  }));
 }
 
 function buildDestinationIndex(records) {
@@ -332,10 +478,7 @@ async function analyzePayroll(sourceUrl) {
   const source = parseSourceUrl(sourceUrl);
   const token = await getTenantAccessToken();
 
-  const sourceRecords = await listRecords(source.appToken, source.tableId, token, [
-    SOURCE_NAME_FIELD,
-    SOURCE_RESULT_FIELD,
-  ]);
+  const sourceRecords = await listRecords(source.appToken, source.tableId, token);
   const summaries = aggregateAttendance(sourceRecords);
   const destinationRecords = await listRecords(
     DESTINATION_APP_TOKEN,
@@ -469,9 +612,11 @@ module.exports = {
   DESTINATION_LATE_COUNT_FIELD,
   DESTINATION_NAME_FIELD,
   DESTINATION_WORK_DAYS_FIELD,
+  findAttendanceDayKey,
   getTenantAccessToken,
   listRecords,
   parseSourceUrl,
+  parseDateKey,
   runParseTest,
   syncPayroll,
 };
