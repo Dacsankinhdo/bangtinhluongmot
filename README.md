@@ -38,8 +38,12 @@ App Secret không được hardcode trong repo. Khi deploy thật, đặt trong 
 LARK_APP_ID=cli_a975bd3a93b99eed
 LARK_APP_SECRET=your_secret_here
 LARK_SOURCE_DATE_FIELD=
+LARK_HR_TABLE_URL=https://dacsankinhdo.sg.larksuite.com/base/MYsqbAZWwamm6NsDRUNlkRc0gEg?table=tblTzjbVaEn78wQH&view=vewIliHDMf
+LARK_HR_NAME_FIELD=
 ```
 
 Sau khi đổi env var trên Vercel, redeploy project để function nhận cấu hình mới.
 
 `Ngày công TT` được đếm unique theo `Tên + Ngày`, để một ngày có 2 dòng vào/ra chỉ tính là 1 ngày công. Script sẽ tự dò cột ngày/giờ phổ biến như `Date`, `Time`, `Ngày`, `Thời gian chấm công`. Nếu bảng nguồn dùng tên cột khác, đặt `LARK_SOURCE_DATE_FIELD` bằng đúng tên cột ngày/giờ trong bảng nguồn.
+
+Bảng nhân sự mặc định là `tblTzjbVaEn78wQH`. Khi phân tích, hệ thống sẽ kiểm tra tên trong bảng chấm công đã có trong bảng nhân sự chưa. Nếu có nhân sự mới, giao diện sẽ hiện nút **Thêm nhân sự** để tạo record mới với cột tên; người cập nhật cần mở bảng nhân sự và bổ sung các cột còn thiếu. Nếu cột tên của bảng nhân sự không tự dò được, đặt `LARK_HR_NAME_FIELD` bằng đúng tên cột.
