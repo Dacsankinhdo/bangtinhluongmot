@@ -7,17 +7,21 @@ const elements = {
   sourceUrl: document.querySelector("#sourceUrl"),
   analyzeButton: document.querySelector("#analyzeButton"),
   syncButton: document.querySelector("#syncButton"),
+  employeeButton: document.querySelector("#employeeButton"),
   statusText: document.querySelector("#statusText"),
   sourceRecordCount: document.querySelector("#sourceRecordCount"),
   employeeCount: document.querySelector("#employeeCount"),
   updateCount: document.querySelector("#updateCount"),
   missingCount: document.querySelector("#missingCount"),
+  hrMissingCount: document.querySelector("#hrMissingCount"),
   parsedSource: document.querySelector("#parsedSource"),
   summaryBody: document.querySelector("#summaryBody"),
   missingList: document.querySelector("#missingList"),
+  hrMissingList: document.querySelector("#hrMissingList"),
 };
 
 let lastAnalyzedUrl = "";
+let lastAnalysis = null;
 
 elements.sourceUrl.value = localStorage.getItem("lastSourceUrl") || sampleUrl;
 
@@ -27,8 +31,11 @@ function setStatus(message, type = "") {
 }
 
 function setBusy(isBusy) {
+  const hrMissingCount = lastAnalysis?.hr?.missingNames?.length || 0;
   elements.analyzeButton.disabled = isBusy;
   elements.syncButton.disabled = isBusy || !lastAnalyzedUrl;
+  elements.employeeButton.disabled =
+    isBusy || !lastAnalyzedUrl || !lastAnalysis || hrMissingCount === 0;
 }
 
 function metric(element, value) {
@@ -66,6 +73,7 @@ function renderAnalysis(analysis) {
   metric(elements.employeeCount, analysis.employeeCount);
   metric(elements.updateCount, analysis.updateCount);
   metric(elements.missingCount, analysis.missingNames.length);
+  metric(elements.hrMissingCount, analysis.hr.missingNames.length);
 
   elements.parsedSource.textContent = `${analysis.source.appToken} / ${analysis.source.tableId}`;
 
@@ -78,13 +86,14 @@ function renderAnalysis(analysis) {
         const badge = row.matched
           ? '<span class="badge ok">Khớp</span>'
           : '<span class="badge warn">Thiếu</span>';
+        const hrBadge = row.hrMatched ? "" : ' <span class="badge warn">Nhân sự mới</span>';
 
         return `
           <tr>
             <td>${escapeHtml(row.name)}</td>
             <td>${escapeHtml(row.workDays)}</td>
             <td>${escapeHtml(row.lateCount)}</td>
-            <td>${badge}</td>
+            <td>${badge}${hrBadge}</td>
           </tr>
         `;
       })
@@ -95,6 +104,14 @@ function renderAnalysis(analysis) {
     elements.missingList.innerHTML = "<li>Tất cả tên đã khớp.</li>";
   } else {
     elements.missingList.innerHTML = analysis.missingNames
+      .map((name) => `<li>${escapeHtml(name)}</li>`)
+      .join("");
+  }
+
+  if (analysis.hr.missingNames.length === 0) {
+    elements.hrMissingList.innerHTML = "<li>Tất cả tên đã có trong bảng nhân sự.</li>";
+  } else {
+    elements.hrMissingList.innerHTML = analysis.hr.missingNames
       .map((name) => `<li>${escapeHtml(name)}</li>`)
       .join("");
   }
@@ -112,16 +129,22 @@ async function analyze() {
   }
 
   lastAnalyzedUrl = "";
+  lastAnalysis = null;
   setBusy(true);
   setStatus("Đang đọc Lark Base và tổng hợp dữ liệu...");
 
   try {
     const payload = await postJson("/api/analyze", { sourceUrl });
     renderAnalysis(payload.analysis);
+    lastAnalysis = payload.analysis;
     lastAnalyzedUrl = sourceUrl;
     localStorage.setItem("lastSourceUrl", sourceUrl);
+    const newEmployeeNote =
+      payload.analysis.hr.missingNames.length > 0
+        ? ` Có ${payload.analysis.hr.missingNames.length} nhân sự mới cần thêm.`
+        : "";
     setStatus(
-      `Đã phân tích ${payload.analysis.employeeCount} nhân viên, sẵn sàng cập nhật ${payload.analysis.updateCount} dòng.`,
+      `Đã phân tích ${payload.analysis.employeeCount} nhân viên, sẵn sàng cập nhật ${payload.analysis.updateCount} dòng.${newEmployeeNote}`,
       "success"
     );
   } catch (error) {
@@ -151,7 +174,45 @@ async function sync() {
   try {
     const payload = await postJson("/api/sync", { sourceUrl });
     renderAnalysis(payload.analysis);
+    lastAnalysis = payload.analysis;
     setStatus(`Đã cập nhật ${payload.analysis.updateCount} dòng vào bảng lương.`, "success");
+  } catch (error) {
+    setStatus(error.message, "error");
+  } finally {
+    setBusy(false);
+  }
+}
+
+async function addEmployees() {
+  const sourceUrl = getSourceUrl();
+  if (!lastAnalyzedUrl || sourceUrl !== lastAnalyzedUrl) {
+    setStatus("URL đã thay đổi, hãy phân tích lại trước khi thêm nhân sự.", "error");
+    return;
+  }
+  if (!lastAnalysis || lastAnalysis.hr.missingNames.length === 0) {
+    setStatus("Không có nhân sự mới cần thêm.", "success");
+    return;
+  }
+
+  const confirmed = window.confirm(
+    `Thêm ${lastAnalysis.hr.missingNames.length} nhân sự mới vào bảng nhân sự?`
+  );
+  if (!confirmed) {
+    return;
+  }
+
+  setBusy(true);
+  setStatus("Đang thêm nhân sự mới...");
+
+  try {
+    const payload = await postJson("/api/employees", { sourceUrl });
+    renderAnalysis(payload.analysis);
+    lastAnalysis = payload.analysis;
+    const addedCount = payload.analysis.createdEmployeeNames.length;
+    setStatus(
+      `Đã thêm ${addedCount} nhân sự mới. Hãy bổ sung các cột còn thiếu trong bảng nhân sự.`,
+      "success"
+    );
   } catch (error) {
     setStatus(error.message, "error");
   } finally {
@@ -161,6 +222,7 @@ async function sync() {
 
 elements.analyzeButton.addEventListener("click", analyze);
 elements.syncButton.addEventListener("click", sync);
+elements.employeeButton.addEventListener("click", addEmployees);
 elements.sourceUrl.addEventListener("keydown", (event) => {
   if (event.key === "Enter") {
     analyze();
@@ -168,6 +230,8 @@ elements.sourceUrl.addEventListener("keydown", (event) => {
 });
 elements.sourceUrl.addEventListener("input", () => {
   if (elements.sourceUrl.value.trim() !== lastAnalyzedUrl) {
+    lastAnalysis = null;
     elements.syncButton.disabled = true;
+    elements.employeeButton.disabled = true;
   }
 });
