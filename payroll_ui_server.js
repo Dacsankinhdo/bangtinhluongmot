@@ -5,7 +5,11 @@ const fs = require("fs/promises");
 const http = require("http");
 const path = require("path");
 
-const { analyzePayroll, syncPayroll } = require("./sync_lark_payroll");
+const {
+  addMissingHrEmployees,
+  analyzePayroll,
+  syncPayroll,
+} = require("./sync_lark_payroll");
 
 const HOST = process.env.HOST || "127.0.0.1";
 const START_PORT = Number(process.env.PORT || 3000);
@@ -36,6 +40,8 @@ function publicAnalysis(analysis) {
     updateCount: analysis.updateCount,
     summaries: analysis.summaries,
     missingNames: analysis.missingNames,
+    hr: analysis.hr,
+    createdEmployeeNames: analysis.createdEmployeeNames || [],
   };
 }
 
@@ -84,6 +90,12 @@ async function handleApi(request, response, url) {
 
     if (url.pathname === "/api/sync") {
       const analysis = await syncPayroll(sourceUrl);
+      sendJson(response, 200, { ok: true, analysis: publicAnalysis(analysis) });
+      return;
+    }
+
+    if (url.pathname === "/api/employees") {
+      const analysis = await addMissingHrEmployees(sourceUrl);
       sendJson(response, 200, { ok: true, analysis: publicAnalysis(analysis) });
       return;
     }
