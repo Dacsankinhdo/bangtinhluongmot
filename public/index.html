@@ -32,6 +32,7 @@
           />
           <button id="analyzeButton" type="button">Phân tích</button>
           <button id="syncButton" type="button" disabled>Cập nhật</button>
+          <button id="employeeButton" type="button" disabled>Thêm nhân sự</button>
         </div>
         <p id="statusText" class="status-text" role="status">Sẵn sàng.</p>
       </section>
@@ -52,6 +53,10 @@
         <div class="metric">
           <span>Chưa khớp</span>
           <strong id="missingCount">0</strong>
+        </div>
+        <div class="metric">
+          <span>Nhân sự mới</span>
+          <strong id="hrMissingCount">0</strong>
         </div>
       </section>
 
@@ -82,11 +87,20 @@
 
         <aside class="side-region" aria-label="Cảnh báo">
           <div class="section-heading">
-            <h2>Chưa khớp tên</h2>
+            <h2>Cần xử lý</h2>
           </div>
-          <ul id="missingList" class="missing-list">
-            <li>Không có dữ liệu.</li>
-          </ul>
+          <div class="side-block">
+            <h3>Chưa có trong bảng lương</h3>
+            <ul id="missingList" class="missing-list">
+              <li>Không có dữ liệu.</li>
+            </ul>
+          </div>
+          <div class="side-block">
+            <h3>Chưa có trong nhân sự</h3>
+            <ul id="hrMissingList" class="missing-list">
+              <li>Không có dữ liệu.</li>
+            </ul>
+          </div>
         </aside>
       </section>
     </main>
