@@ -15,8 +15,10 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import sys
 from dataclasses import dataclass
+from datetime import datetime, timedelta, timezone
 from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.parse import parse_qs, quote, urlencode, urlparse
@@ -33,9 +35,43 @@ DESTINATION_TABLE_ID = "tblgL5ME8fR2c8mc"
 
 SOURCE_NAME_FIELD = "Name"
 SOURCE_RESULT_FIELD = "Result"
+SOURCE_DATE_FIELD = os.getenv("LARK_SOURCE_DATE_FIELD", "")
 DESTINATION_NAME_FIELD = "Tên NV"
 DESTINATION_WORK_DAYS_FIELD = "Ngày công TT"
 DESTINATION_LATE_COUNT_FIELD = "Số lần trễ"
+
+VIETNAM_TZ = timezone(timedelta(hours=7))
+
+SOURCE_DATE_FIELD_CANDIDATES = [
+    "Date",
+    "Day",
+    "Time",
+    "Timestamp",
+    "Check Time",
+    "Clock Time",
+    "Attendance Time",
+    "Attendance Date",
+    "Record Time",
+    "Ngày",
+    "Ngày công",
+    "Thời gian",
+    "Thời gian chấm công",
+    "Giờ chấm công",
+]
+
+SOURCE_DATE_FIELD_KEYWORDS = [
+    "date",
+    "day",
+    "time",
+    "timestamp",
+    "clock",
+    "check",
+    "attendance",
+    "ngày",
+    "thời gian",
+    "giờ",
+    "chấm công",
+]
 
 SAMPLE_SOURCE_URL = (
     "https://dacsankinhdo.sg.larksuite.com/base/"
@@ -206,6 +242,88 @@ def normalize_name(name: str) -> str:
     return " ".join(name.split()).casefold()
 
 
+def format_date_key(value: datetime) -> str:
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=VIETNAM_TZ)
+    return value.astimezone(VIETNAM_TZ).strftime("%Y-%m-%d")
+
+
+def parse_date_key(value: Any) -> str:
+    if value in (None, ""):
+        return ""
+
+    if isinstance(value, (int, float)):
+        timestamp = value / 1000 if value > 100000000000 else value
+        try:
+            return format_date_key(datetime.fromtimestamp(timestamp, tz=timezone.utc))
+        except (OverflowError, OSError, ValueError):
+            return ""
+
+    if isinstance(value, list):
+        for item in value:
+            date_key = parse_date_key(item)
+            if date_key:
+                return date_key
+        return ""
+
+    if isinstance(value, dict):
+        for key in ("timestamp", "time", "date", "value", "text"):
+            if key in value:
+                date_key = parse_date_key(value[key])
+                if date_key:
+                    return date_key
+        return ""
+
+    text = str(value).strip()
+    ymd = re.search(r"\b(\d{4})[-/](\d{1,2})[-/](\d{1,2})\b", text)
+    if ymd:
+        return f"{ymd.group(1)}-{ymd.group(2).zfill(2)}-{ymd.group(3).zfill(2)}"
+
+    dmy = re.search(r"\b(\d{1,2})[-/](\d{1,2})[-/](\d{4})\b", text)
+    if dmy:
+        return f"{dmy.group(3)}-{dmy.group(2).zfill(2)}-{dmy.group(1).zfill(2)}"
+
+    try:
+        normalized = text.replace("Z", "+00:00")
+        return format_date_key(datetime.fromisoformat(normalized))
+    except ValueError:
+        return ""
+
+
+def find_field_value(fields: dict[str, Any], field_name: str) -> Any:
+    if not field_name:
+        return None
+    if field_name in fields:
+        return fields[field_name]
+
+    normalized = field_name.casefold()
+    for key, value in fields.items():
+        if key.casefold() == normalized:
+            return value
+    return None
+
+
+def find_attendance_day_key(fields: dict[str, Any]) -> str:
+    if SOURCE_DATE_FIELD:
+        configured_key = parse_date_key(find_field_value(fields, SOURCE_DATE_FIELD))
+        if configured_key:
+            return configured_key
+
+    for field_name in SOURCE_DATE_FIELD_CANDIDATES:
+        candidate_key = parse_date_key(find_field_value(fields, field_name))
+        if candidate_key:
+            return candidate_key
+
+    for field_name, value in fields.items():
+        normalized = field_name.casefold()
+        if any(keyword.casefold() in normalized for keyword in SOURCE_DATE_FIELD_KEYWORDS):
+            candidate_key = parse_date_key(value)
+            if candidate_key:
+                return candidate_key
+
+    return ""
+
+
 def is_valid_attendance_record(name: str, result: str) -> bool:
     return bool(name) and bool(result)
 
@@ -213,6 +331,7 @@ def is_valid_attendance_record(name: str, result: str) -> bool:
 def aggregate_attendance(records: list[dict[str, Any]]) -> dict[str, AttendanceSummary]:
     summaries: dict[str, AttendanceSummary] = {}
     display_names: dict[str, str] = {}
+    work_day_keys: dict[str, set[str]] = {}
 
     for record in records:
         fields = record.get("fields") or {}
@@ -225,7 +344,12 @@ def aggregate_attendance(records: list[dict[str, Any]]) -> dict[str, AttendanceS
         name_key = normalize_name(name)
         display_names.setdefault(name_key, name)
         summary = summaries.setdefault(display_names[name_key], AttendanceSummary())
-        summary.work_days += 1
+        employee_day_keys = work_day_keys.setdefault(name_key, set())
+        day_key = find_attendance_day_key(fields)
+        work_day_key = day_key or f"record:{record.get('record_id') or len(employee_day_keys)}"
+        if work_day_key not in employee_day_keys:
+            employee_day_keys.add(work_day_key)
+            summary.work_days += 1
         if result.casefold() == "very late":
             summary.late_count += 1
 
@@ -290,12 +414,7 @@ def sync_payroll(source_url: str, *, dry_run: bool = False) -> None:
     token = get_tenant_access_token()
     print("Fetched tenant_access_token.")
 
-    source_records = list_records(
-        source.app_token,
-        source.table_id,
-        token,
-        field_names=[SOURCE_NAME_FIELD, SOURCE_RESULT_FIELD],
-    )
+    source_records = list_records(source.app_token, source.table_id, token)
     summaries = aggregate_attendance(source_records)
     print(f"Read {len(source_records)} source records, summarized {len(summaries)} employees.")
 
