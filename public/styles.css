@@ -112,7 +112,7 @@ h2 {
 
 .url-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
   gap: 10px;
 }
 
@@ -161,6 +161,14 @@ button:disabled {
   background: #92400e;
 }
 
+#employeeButton {
+  background: #365f91;
+}
+
+#employeeButton:hover:not(:disabled) {
+  background: #27496f;
+}
+
 .status-text {
   min-height: 20px;
   margin: 10px 0 0;
@@ -180,7 +188,7 @@ button:disabled {
 
 .metrics-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 12px;
   margin-top: 16px;
 }
@@ -310,12 +318,23 @@ td:nth-child(4) {
 .missing-list {
   display: grid;
   gap: 8px;
-  min-height: 120px;
   margin: 0;
   padding: 14px 16px 16px;
   color: var(--muted);
   font-size: 14px;
   list-style: none;
+}
+
+.side-block + .side-block {
+  border-top: 1px solid var(--line);
+}
+
+.side-block h3 {
+  margin: 0;
+  padding: 14px 16px 0;
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.3;
 }
 
 .missing-list li {
