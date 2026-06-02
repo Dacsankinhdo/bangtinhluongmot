@@ -603,6 +603,12 @@ function findSourceSummaryValues(fields) {
       SOURCE_OT_HOURS_FIELD_CANDIDATES,
       SOURCE_SUMMARY_FIELD_KEYWORDS.otHours
     ),
+    standardDays: findNumericSummaryValue( 
+      fields,
+      SOURCE_STANDARD_DAYS_FIELD,
+      SOURCE_STANDARD_DAYS_FIELD_CANDIDATES,
+      SOURCE_SUMMARY_FIELD_KEYWORDS.standardDays
+    ),
   };
 }
 
