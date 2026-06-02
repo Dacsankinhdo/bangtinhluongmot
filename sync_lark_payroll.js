@@ -105,6 +105,7 @@ const SOURCE_WORK_DAYS_FIELD_CANDIDATES = [
   "Số ngày công",
   "Ngày công",
   "Công thực tế",
+  "Workday attendance",
   "Actual Work Days",
   "Work Days",
 ];
