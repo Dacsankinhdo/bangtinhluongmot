@@ -42,6 +42,12 @@ function metric(element, value) {
   element.textContent = new Intl.NumberFormat("vi-VN").format(value || 0);
 }
 
+function numberText(value) {
+  return new Intl.NumberFormat("vi-VN", {
+    maximumFractionDigits: 2,
+  }).format(value || 0);
+}
+
 function escapeHtml(value) {
   return String(value)
     .replaceAll("&", "&amp;")
@@ -79,7 +85,7 @@ function renderAnalysis(analysis) {
 
   if (analysis.summaries.length === 0) {
     elements.summaryBody.innerHTML =
-      '<tr><td colspan="4" class="empty-state">Không có dữ liệu phù hợp.</td></tr>';
+      '<tr><td colspan="5" class="empty-state">Không có dữ liệu phù hợp.</td></tr>';
   } else {
     elements.summaryBody.innerHTML = analysis.summaries
       .map((row) => {
@@ -93,6 +99,7 @@ function renderAnalysis(analysis) {
             <td>${escapeHtml(row.name)}</td>
             <td>${escapeHtml(row.workDays)}</td>
             <td>${escapeHtml(row.lateCount)}</td>
+            <td>${escapeHtml(numberText(row.otHours))}</td>
             <td>${badge}${hrBadge}</td>
           </tr>
         `;
