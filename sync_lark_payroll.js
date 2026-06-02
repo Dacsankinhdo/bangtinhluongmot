@@ -736,6 +736,7 @@ function aggregateAttendance(records) {
         workDays: 0,
         lateCount: 0,
         otHours: 0,
+        standardDays: 0,
         workDayKeys: new Set(),
       });
     }
@@ -750,6 +751,9 @@ function aggregateAttendance(records) {
       }
       if (summaryValues.otHours.found) {
         summary.otHours += summaryValues.otHours.value;
+      }
+      if (summaryValues.standardDays.found) {  
+        summary.standardDays = summaryValues.standardDays.value;  
       }
       continue;
     }
