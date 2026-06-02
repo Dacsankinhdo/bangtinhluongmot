@@ -35,10 +35,9 @@ Vercel sẽ phục vụ:
 App Secret không được hardcode trong repo. Khi deploy thật, đặt trong Vercel Project Settings:
 
 ```text
-LARK_APP_ID=cli_a975bd3a93b99eed
+LARK_APP_ID=your_ID_here
 LARK_APP_SECRET=your_secret_here
 LARK_SOURCE_DATE_FIELD=
-<<<<<<< HEAD
 LARK_SOURCE_WORK_DAYS_FIELD=
 LARK_SOURCE_LATE_COUNT_FIELD=
 LARK_SOURCE_OT_HOURS_FIELD=
