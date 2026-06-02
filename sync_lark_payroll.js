@@ -777,6 +777,7 @@ function aggregateAttendance(records) {
     workDays: summary.workDays,
     lateCount: summary.lateCount,
     otHours: summary.otHours,
+    standardDays: summary.standardDays,
   }));
 }
 
