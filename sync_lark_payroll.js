@@ -147,6 +147,7 @@ const SOURCE_SUMMARY_FIELD_KEYWORDS = {
   workDays: ["ngày làm việc", "ngày công", "công thực tế", "work day"],
   lateCount: ["trễ", "late"],
   otHours: ["ot", "tăng ca", "overtime"],
+  standardDays: ["ngày chuẩn", "standard", "days standard"],
 };
 
 const SAMPLE_SOURCE_URL =
