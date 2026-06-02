@@ -26,10 +26,14 @@ const HR_TABLE_URL =
 const SOURCE_NAME_FIELD = "Name";
 const SOURCE_RESULT_FIELD = "Result";
 const SOURCE_DATE_FIELD = process.env.LARK_SOURCE_DATE_FIELD || "";
+const SOURCE_WORK_DAYS_FIELD = process.env.LARK_SOURCE_WORK_DAYS_FIELD || "";
+const SOURCE_LATE_COUNT_FIELD = process.env.LARK_SOURCE_LATE_COUNT_FIELD || "";
+const SOURCE_OT_HOURS_FIELD = process.env.LARK_SOURCE_OT_HOURS_FIELD || "";
 const HR_NAME_FIELD = process.env.LARK_HR_NAME_FIELD || "";
 const DESTINATION_NAME_FIELD = "Tên NV";
 const DESTINATION_WORK_DAYS_FIELD = "Ngày công TT";
 const DESTINATION_LATE_COUNT_FIELD = "Số lần trễ";
+const DESTINATION_OT_HOURS_FIELD = process.env.LARK_DESTINATION_OT_HOURS_FIELD || "Số giờ OT";
 
 const SOURCE_DATE_FIELD_CANDIDATES = [
   "Date",
@@ -81,6 +85,54 @@ const EMPLOYEE_NAME_FIELD_KEYWORDS = [
   "name",
   "employee",
 ];
+
+const SOURCE_NAME_FIELD_CANDIDATES = [
+  SOURCE_NAME_FIELD,
+  DESTINATION_NAME_FIELD,
+  "Tên nhân viên",
+  "Họ và tên",
+  "Họ tên",
+  "Nhân viên",
+  "Employee",
+  "Employee Name",
+  "Full Name",
+];
+
+const SOURCE_WORK_DAYS_FIELD_CANDIDATES = [
+  "Ngày làm việc thực tế",
+  "Ngày công TT",
+  "Ngày công thực tế",
+  "Số ngày công",
+  "Ngày công",
+  "Công thực tế",
+  "Actual Work Days",
+  "Work Days",
+];
+
+const SOURCE_LATE_COUNT_FIELD_CANDIDATES = [
+  "Số lần trễ",
+  "Lần trễ",
+  "Số lần đi trễ",
+  "Very late",
+  "Late Count",
+];
+
+const SOURCE_OT_HOURS_FIELD_CANDIDATES = [
+  "Số giờ OT",
+  "Số giờ tăng ca",
+  "Giờ OT",
+  "Giờ tăng ca",
+  "OT",
+  "OT Hours",
+  "Overtime",
+  "Overtime Hours",
+];
+
+const SOURCE_SUMMARY_FIELD_KEYWORDS = {
+  workDays: ["ngày làm việc", "ngày công", "công thực tế", "work day"],
+  lateCount: ["trễ", "late"],
+  otHours: ["ot", "tăng ca", "overtime"],
+};
 
 const SAMPLE_SOURCE_URL =
   "https://dacsankinhdo.sg.larksuite.com/base/" +
@@ -416,6 +468,128 @@ function findFieldValue(fields, fieldName) {
   return matchedKey ? fields[matchedKey] : undefined;
 }
 
+function findCandidateField(fields, configuredField, candidates, keywords = []) {
+  if (configuredField) {
+    const configuredValue = findFieldValue(fields, configuredField);
+    if (configuredValue !== undefined) {
+      return { fieldName: configuredField, value: configuredValue };
+    }
+  }
+
+  for (const fieldName of candidates) {
+    const value = findFieldValue(fields, fieldName);
+    if (value !== undefined) {
+      return { fieldName, value };
+    }
+  }
+
+  const matchedKey = Object.keys(fields).find((fieldName) => {
+    const normalized = fieldName.toLocaleLowerCase("vi-VN");
+    return keywords.some((keyword) => normalized.includes(keyword));
+  });
+
+  return matchedKey ? { fieldName: matchedKey, value: fields[matchedKey] } : null;
+}
+
+function findSourceName(fields) {
+  const candidate = findCandidateField(fields, "", SOURCE_NAME_FIELD_CANDIDATES, [
+    "tên",
+    "nhân viên",
+    "name",
+    "employee",
+  ]);
+  return candidate ? cellToText(candidate.value) : "";
+}
+
+function parseNumberValue(value) {
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
+
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : null;
+  }
+
+  if (typeof value === "boolean") {
+    return value ? 1 : 0;
+  }
+
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const parsed = parseNumberValue(item);
+      if (parsed !== null) {
+        return parsed;
+      }
+    }
+    return null;
+  }
+
+  if (typeof value === "object") {
+    for (const key of ["number", "value", "text", "name"]) {
+      if (Object.prototype.hasOwnProperty.call(value, key)) {
+        const parsed = parseNumberValue(value[key]);
+        if (parsed !== null) {
+          return parsed;
+        }
+      }
+    }
+    return null;
+  }
+
+  const text = String(value).trim();
+  if (!text) {
+    return null;
+  }
+
+  const normalized = text
+    .replace(/\s/g, "")
+    .replace(/,/g, ".")
+    .replace(/[^\d.-]/g, "");
+  if (!normalized || normalized === "-" || normalized === ".") {
+    return null;
+  }
+
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function findNumericSummaryValue(fields, configuredField, candidates, keywords) {
+  const candidate = findCandidateField(fields, configuredField, candidates, keywords);
+  if (!candidate) {
+    return { found: false, value: 0, fieldName: "" };
+  }
+
+  const parsed = parseNumberValue(candidate.value);
+  return {
+    found: parsed !== null,
+    value: parsed === null ? 0 : parsed,
+    fieldName: candidate.fieldName,
+  };
+}
+
+function findSourceSummaryValues(fields) {
+  return {
+    workDays: findNumericSummaryValue(
+      fields,
+      SOURCE_WORK_DAYS_FIELD,
+      SOURCE_WORK_DAYS_FIELD_CANDIDATES,
+      SOURCE_SUMMARY_FIELD_KEYWORDS.workDays
+    ),
+    lateCount: findNumericSummaryValue(
+      fields,
+      SOURCE_LATE_COUNT_FIELD,
+      SOURCE_LATE_COUNT_FIELD_CANDIDATES,
+      SOURCE_SUMMARY_FIELD_KEYWORDS.lateCount
+    ),
+    otHours: findNumericSummaryValue(
+      fields,
+      SOURCE_OT_HOURS_FIELD,
+      SOURCE_OT_HOURS_FIELD_CANDIDATES,
+      SOURCE_SUMMARY_FIELD_KEYWORDS.otHours
+    ),
+  };
+}
+
 function getFieldName(field) {
   if (!field || typeof field !== "object") {
     return "";
@@ -517,10 +691,16 @@ function aggregateAttendance(records) {
 
   for (const record of records) {
     const fields = record.fields || {};
-    const name = cellToText(fields[SOURCE_NAME_FIELD]);
-    const result = cellToText(fields[SOURCE_RESULT_FIELD]);
+    const name = findSourceName(fields);
+    const result = cellToText(findFieldValue(fields, SOURCE_RESULT_FIELD));
+    const summaryValues = findSourceSummaryValues(fields);
+    const hasDirectSummaryCounts =
+      summaryValues.workDays.found || summaryValues.lateCount.found;
 
-    if (!isValidAttendanceRecord(name, result)) {
+    if (!name) {
+      continue;
+    }
+    if (!hasDirectSummaryCounts && !isValidAttendanceRecord(name, result)) {
       continue;
     }
 
@@ -533,11 +713,25 @@ function aggregateAttendance(records) {
         name: displayNameByKey.get(nameKey),
         workDays: 0,
         lateCount: 0,
+        otHours: 0,
         workDayKeys: new Set(),
       });
     }
 
     const summary = summariesByKey.get(nameKey);
+    if (hasDirectSummaryCounts) {
+      if (summaryValues.workDays.found) {
+        summary.workDays += summaryValues.workDays.value;
+      }
+      if (summaryValues.lateCount.found) {
+        summary.lateCount += summaryValues.lateCount.value;
+      }
+      if (summaryValues.otHours.found) {
+        summary.otHours += summaryValues.otHours.value;
+      }
+      continue;
+    }
+
     const dayKey = findAttendanceDayKey(fields);
     const workDayKey = dayKey || `record:${record.record_id || summary.workDayKeys.size}`;
     if (!summary.workDayKeys.has(workDayKey)) {
@@ -547,12 +741,16 @@ function aggregateAttendance(records) {
     if (result.toLocaleLowerCase("en-US") === "very late") {
       summary.lateCount += 1;
     }
+    if (summaryValues.otHours.found) {
+      summary.otHours += summaryValues.otHours.value;
+    }
   }
 
   return Array.from(summariesByKey.values()).map((summary) => ({
     name: summary.name,
     workDays: summary.workDays,
     lateCount: summary.lateCount,
+    otHours: summary.otHours,
   }));
 }
 
@@ -613,6 +811,7 @@ function buildUpdates(summaries, destinationIndex) {
       fields: {
         [DESTINATION_WORK_DAYS_FIELD]: summary.workDays,
         [DESTINATION_LATE_COUNT_FIELD]: summary.lateCount,
+        [DESTINATION_OT_HOURS_FIELD]: summary.otHours || 0,
       },
     });
   }
@@ -693,6 +892,7 @@ async function analyzePayroll(sourceUrl) {
       DESTINATION_NAME_FIELD,
       DESTINATION_WORK_DAYS_FIELD,
       DESTINATION_LATE_COUNT_FIELD,
+      DESTINATION_OT_HOURS_FIELD,
     ]
   );
 
@@ -706,6 +906,7 @@ async function analyzePayroll(sourceUrl) {
       name: summary.name,
       workDays: summary.workDays,
       lateCount: summary.lateCount,
+      otHours: summary.otHours || 0,
       matched: destinationIndex.has(normalizeName(summary.name)),
       hrMatched: !hr.missingNames.some(
         (missingName) => normalizeName(missingName) === normalizeName(summary.name)
@@ -832,14 +1033,17 @@ module.exports = {
   DESTINATION_TABLE_ID,
   DESTINATION_LATE_COUNT_FIELD,
   DESTINATION_NAME_FIELD,
+  DESTINATION_OT_HOURS_FIELD,
   DESTINATION_WORK_DAYS_FIELD,
   findAttendanceDayKey,
+  findSourceSummaryValues,
   getHrTable,
   getTenantAccessToken,
   listRecords,
   listFields,
   parseSourceUrl,
   parseDateKey,
+  parseNumberValue,
   resolveEmployeeNameField,
   runParseTest,
   syncPayroll,
