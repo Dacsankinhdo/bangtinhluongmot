@@ -134,6 +134,15 @@ const SOURCE_OT_HOURS_FIELD_CANDIDATES = [
   "Overtime Hours",
 ];
 
+const SOURCE_STANDARD_DAYS_FIELD_CANDIDATES = [
+  "Ngày chuẩn",
+  "Ngày chuẩn tính lương",
+  "Standard days",
+  "Working days standard",
+  "Days standard",
+  "Expected working days",
+];
+
 const SOURCE_SUMMARY_FIELD_KEYWORDS = {
   workDays: ["ngày làm việc", "ngày công", "công thực tế", "work day"],
   lateCount: ["trễ", "late"],
