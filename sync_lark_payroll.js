@@ -717,7 +717,11 @@ function aggregateAttendance(records) {
     const result = cellToText(findFieldValue(fields, SOURCE_RESULT_FIELD));
     const summaryValues = findSourceSummaryValues(fields);
     const hasDirectSummaryCounts =
-      summaryValues.workDays.found || summaryValues.lateCount.found;
+      summaryValues.workDays.found ||
+      summaryValues.lateCount.found ||
+      summaryValues.standardDays.found ||
+      summaryValues.otHours.found;
+
 
     if (!name) {
       continue;
