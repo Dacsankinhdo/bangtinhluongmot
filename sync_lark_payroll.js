@@ -114,6 +114,8 @@ const SOURCE_LATE_COUNT_FIELD_CANDIDATES = [
   "Số lần trễ",
   "Lần trễ",
   "Số lần đi trễ",
+  "Late arrivals",
+  "Very late arrivals",
   "Very late",
   "Late Count",
 ];
@@ -123,6 +125,7 @@ const SOURCE_OT_HOURS_FIELD_CANDIDATES = [
   "Số giờ tăng ca",
   "Giờ OT",
   "Giờ tăng ca",
+  "Total overtime duration(hr)",
   "OT",
   "OT Hours",
   "Overtime",
