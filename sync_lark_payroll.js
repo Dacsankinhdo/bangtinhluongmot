@@ -921,6 +921,7 @@ async function analyzePayroll(sourceUrl) {
       DESTINATION_WORK_DAYS_FIELD,
       DESTINATION_LATE_COUNT_FIELD,
       DESTINATION_OT_HOURS_FIELD,
+      DESTINATION_STANDARD_DAYS_FIELD,
     ]
   );
 
