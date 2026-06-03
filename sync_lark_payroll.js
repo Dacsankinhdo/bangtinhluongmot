@@ -789,6 +789,9 @@ function aggregateAttendance(records) {
         lateCount: 0,
         otHours: 0,
         standardDays: 0,
+        otWorkday: 0,   
+        otWeekend: 0,   
+        otHoliday: 0,   
         workDayKeys: new Set(),
       });
     }
