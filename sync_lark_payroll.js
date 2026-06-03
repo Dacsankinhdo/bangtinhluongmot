@@ -810,6 +810,10 @@ function aggregateAttendance(records) {
       if (summaryValues.standardDays.found) {  
         summary.standardDays = summaryValues.standardDays.value;  
       }
+      if (summaryValues.otWorkday.found) summary.otWorkday += summaryValues.otWorkday.value;
+      if (summaryValues.otWeekend.found) summary.otWeekend += summaryValues.otWeekend.value;
+      if (summaryValues.otHoliday.found) summary.otHoliday += summaryValues.otHoliday.value;
+
       continue;
     }
 
@@ -833,6 +837,9 @@ function aggregateAttendance(records) {
     lateCount: summary.lateCount,
     otHours: summary.otHours,
     standardDays: summary.standardDays,
+    otWorkday: summary.otWorkday,   
+    otWeekend: summary.otWeekend,  
+    otHoliday: summary.otHoliday,
   }));
 }
 
