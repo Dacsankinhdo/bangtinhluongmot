@@ -768,7 +768,10 @@ function aggregateAttendance(records) {
       summaryValues.workDays.found ||
       summaryValues.lateCount.found ||
       summaryValues.standardDays.found ||
-      summaryValues.otHours.found;
+      summaryValues.otHours.found ||
+      summaryValues.otWorkday.found ||   
+      summaryValues.otWeekend.found || 
+      summaryValues.otHoliday.found;
 
 
     if (!name) {
