@@ -149,11 +149,35 @@ const SOURCE_STANDARD_DAYS_FIELD_CANDIDATES = [
   "Expected working days",
 ];
 
+const SOURCE_OT_WORKDAY_FIELD_CANDIDATES = [
+  "Overtime on working days(hr)",
+  "Overtime on working days - Overtime pay(hr)",
+  "Tăng ca ngày thường",
+  "OT ngày thường",
+];
+
+const SOURCE_OT_WEEKEND_FIELD_CANDIDATES = [
+  "Overtime on non-working days(hr)",
+  "Overtime on non-working days - Overtime pay(hr)",
+  "Tăng ca ngày nghỉ tuần",
+  "OT ngày nghỉ",
+];
+
+const SOURCE_OT_HOLIDAY_FIELD_CANDIDATES = [
+  "Overtime on holidays(hr)",
+  "Overtime on holidays - Overtime pay(hr)",
+  "Tăng ca ngày lễ",
+  "OT ngày lễ",
+];
+
 const SOURCE_SUMMARY_FIELD_KEYWORDS = {
   workDays: ["ngày làm việc", "ngày công", "công thực tế", "work day"],
   lateCount: ["trễ", "late"],
   otHours: ["ot", "tăng ca", "overtime"],
   standardDays: ["ngày chuẩn", "standard", "days standard"],
+  otWorkday: ["overtime on working", "tăng ca ngày thường"],
+  otWeekend: ["overtime on non-working", "tăng ca ngày nghỉ"],
+  otHoliday: ["overtime on holidays", "tăng ca ngày lễ"],
 };
 
 const SAMPLE_SOURCE_URL =
