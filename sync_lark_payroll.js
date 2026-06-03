@@ -902,6 +902,9 @@ function buildUpdates(summaries, destinationIndex) {
         [DESTINATION_LATE_COUNT_FIELD]: summary.lateCount,
         [DESTINATION_OT_HOURS_FIELD]: summary.otHours || 0,
         [DESTINATION_STANDARD_DAYS_FIELD]: summary.standardDays || 0,
+        [DESTINATION_OT_WORKDAY_FIELD]: summary.otWorkday || 0,
+        [DESTINATION_OT_WEEKEND_FIELD]: summary.otWeekend || 0,
+        [DESTINATION_OT_HOLIDAY_FIELD]: summary.otHoliday || 0,
       },
     });
   }
