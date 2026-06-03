@@ -639,6 +639,24 @@ function findSourceSummaryValues(fields) {
       SOURCE_STANDARD_DAYS_FIELD_CANDIDATES,
       SOURCE_SUMMARY_FIELD_KEYWORDS.standardDays
     ),
+    otWorkday: findNumericSummaryValue(
+      fields,
+      SOURCE_OT_WORKDAY_FIELD,
+      SOURCE_OT_WORKDAY_FIELD_CANDIDATES,
+      ["overtime on working", "tăng ca ngày thường"],
+    ),
+    otWeekend: findNumericSummaryValue(
+      fields,
+      SOURCE_OT_WEEKEND_FIELD,
+      SOURCE_OT_WEEKEND_FIELD_CANDIDATES,
+      ["overtime on non-working", "tăng ca ngày nghỉ"],
+    ),
+    otHoliday: findNumericSummaryValue(
+      fields,
+      SOURCE_OT_HOLIDAY_FIELD,
+      SOURCE_OT_HOLIDAY_FIELD_CANDIDATES,
+      ["overtime on holidays", "tăng ca ngày lễ"],
+    ),
   };
 }
 
